@@ -2,6 +2,10 @@ package com.diplom.spring_news_agregator.newsjobs;
 
 import com.diplom.spring_news_agregator.model.News;
 import com.diplom.spring_news_agregator.service.NewsService;
+import com.diplom.spring_news_agregator.service.QuoteService;
+import com.diplom.spring_news_agregator.service.QuoteServiceImpl;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -15,31 +19,41 @@ import java.io.IOException;
 @Component
 public class ParseTask {
 
-    public ParseTask(NewsService newsService) {
+    private static final Logger LOGGER = LogManager.getLogger(ParseTask.class);
+
+    public ParseTask(NewsService newsService,  QuoteService imp) {
         this.newsService = newsService;
+        this.imp = imp;
     }
 
-   // @Autowired
     NewsService newsService;
+    QuoteService imp;
 
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(fixedDelay = 1000000)
+    public void parseQuote() {
+        imp.parserin();
+    }
+
+    @Scheduled(fixedDelay = 10000) // кожні 10 сек метод робить запит
     public void parseNewNews() {
-        String url = "https://news.ycombinator.com/";
+        String url = "https://quotes.toscrape.com/"; // https://news.ycombinator.com/
 
         try {
             Document document = Jsoup.connect(url)
-                    .userAgent("Google Chrome")
+                    .userAgent("Chrome/124.0.6367.119")
                     .timeout(5000)
                     .referrer("https://google.com")
-                    .get();
-            Elements newsElements = document.getElementsByClass("storylink");
-            for (Element el : newsElements) {
-                String title = el.ownText();
-                if(!newsService.isExist(title)){
-                    News obj = new News();
+                    .get(); // метод
+             Elements newsElements = document.getElementsByClass("author");
+            LOGGER.info("Found " + newsElements.size() + " new news"); // show 30
+            for (Element el : newsElements) { // для кожного єлемента
+
+                  String title = el.ownText();
+                if (!newsService.isExist(title)) { // якщо новини не було
+                    News obj = new News(); // робимо нову
+                    LOGGER.info("Adding new news " + title); // ""
                     obj.setTitle(title);
                     newsService.save(obj);
-
                 }
             }
         } catch (IOException e) {
@@ -47,6 +61,4 @@ public class ParseTask {
         }
 
     }
-
-
 }
